@@ -26,6 +26,7 @@ export class GameSession extends EventEmitter {
   #cpuRunner = null;
   #inputLocked = true;
   #revealInProgress = false;
+  #selection;
 
   constructor({ mode, difficulty, deckSize, services }) {
     super();
@@ -34,9 +35,13 @@ export class GameSession extends EventEmitter {
     this.deckSize = deckSize;
     this.s = services;
     this.#scheduler = new Scheduler(services.clock);
+    this.#selection = services.selectionFactory.create(difficulty.interaction);
   }
 
   get game() { return this.#game; }
+
+  /** このゲームは腕を伸ばしてカードに触れる操作を使うか */
+  get usesReach() { return this.#selection.usesReach; }
 
   start() {
     const { deckFactory, deckOptions, matchRule, field, pileFactory, hud, timing } = this.s;
@@ -54,7 +59,9 @@ export class GameSession extends EventEmitter {
     this.#subscribe();
 
     field.populate(this.#game.cards, this.difficulty);
+    hud.setHelp(this.usesReach ? TEXT.help.reach : TEXT.help.point);
     hud.show();
+    if (this.usesReach) this.s.reachMeter.show();
     this.#renderHud();
     this.#scheduler.after(timing.dealSettleMs, () => {
       this.#inputLocked = false;
@@ -73,8 +80,18 @@ export class GameSession extends EventEmitter {
   /** 人間が画面上のある位置をタップした */
   handleTap(ndc) {
     if (!this.canHumanAct()) return;
-    const view = this.s.picker.pick(ndc);
-    if (view) this.#game.select(view.card);
+    const card = this.#selection.cardFromTap(ndc);
+    if (card) this.#game.select(card);
+  }
+
+  /**
+   * 腕の指先がカードに触れた。
+   * @returns {boolean} 選んだとして受け付けたら true（受け付けなければ、そのカードは弾かれる）
+   */
+  handleTouch(view) {
+    if (!this.canHumanAct()) return false;
+    const card = this.#selection.cardFromTouch(view);
+    return card ? this.#game.select(card) : false;
   }
 
   update() {
@@ -87,6 +104,7 @@ export class GameSession extends EventEmitter {
     this.#game?.removeAllListeners();
     this.s.field.clear();
     this.s.hud.hide();
+    this.s.reachMeter.hide();
   }
 
   /* ---------------- 準備 ---------------- */

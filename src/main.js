@@ -5,7 +5,7 @@
 import { THREE } from './lib/three.js';
 import {
   CARD_SIZE, CARD_TEXTURE_SIZE, DECK_OPTIONS, ATTRACT_DECK_SIZE, TIMING, MOTION,
-  FLOAT_AREA, REVEAL_LAYOUT, TABLE, CAMERA, POINTER, CPU, PILES
+  FLOAT_AREA, REVEAL_LAYOUT, TABLE, CAMERA, POINTER, CPU, PILES, ARM
 } from './config/GameConfig.js';
 import { TEXT } from './config/strings.js';
 import { DIFFICULTIES, DEFAULT_DIFFICULTY_ID, getDifficulty } from './config/Difficulties.js';
@@ -40,10 +40,14 @@ import { HAND_POSES } from './render/player/HandPoses.js';
 import { PointingHand } from './render/player/PointingHand.js';
 import { HoldingHand } from './render/player/HoldingHand.js';
 import { PileFactory } from './render/piles/PileFactory.js';
+import { StretchArm } from './render/player/StretchArm.js';
+import { ArmReach } from './physics/ArmReach.js';
+import { ArmContactSystem } from './physics/ArmContactSystem.js';
 
 import { PointerInput } from './input/PointerInput.js';
 import { KeyboardInput } from './input/KeyboardInput.js';
 import { KeyboardLookController } from './input/KeyboardLookController.js';
+import { ReachController } from './input/ReachController.js';
 
 import { Hud } from './ui/Hud.js';
 import { Toast } from './ui/Toast.js';
@@ -53,6 +57,7 @@ import { ResultFormatter } from './ui/ResultFormatter.js';
 import { LoadingScreen } from './ui/LoadingScreen.js';
 import { PauseScreen } from './ui/PauseScreen.js';
 import { PauseButton } from './ui/PauseButton.js';
+import { ReachMeter } from './ui/ReachMeter.js';
 
 import { App } from './app/App.js';
 import { GameSession } from './app/GameSession.js';
@@ -60,6 +65,7 @@ import { AttractMode } from './app/AttractMode.js';
 import { HoverHighlighter } from './app/HoverHighlighter.js';
 import { ViewportBinder } from './app/ViewportBinder.js';
 import { PauseController } from './app/PauseController.js';
+import { CardSelectionFactory } from './app/selection/CardSelectionMethods.js';
 import { waitForFont } from './app/fontLoader.js';
 
 const $ = id => document.getElementById(id);
@@ -83,8 +89,12 @@ async function main() {
   const pointingHand = new PointingHand({
     camera: rig.camera,
     model: handModels.create(HAND_POSES.point),
-    basePosition: new THREE.Vector3(0.21, -0.25, -0.44)
+    basePosition: new THREE.Vector3(0.21, -0.25, -0.44),
+    shoulderPosition: new THREE.Vector3(...ARM.shoulder)
   });
+  const stretchArm = new StretchArm({ camera: rig.camera, hand: pointingHand });
+  const armReach = new ArmReach(ARM);
+  pointingHand.setReachProvider(() => armReach.length);
   const holdingHand = new HoldingHand({
     camera: rig.camera,
     model: handModels.create(HAND_POSES.open, { mirror: true }),
@@ -102,7 +112,8 @@ async function main() {
   const field = new CardField({
     scene, textures, motion: MOTION, cardSize: CARD_SIZE,
     layout: new FloatLayout({ area: FLOAT_AREA }),
-    driftFactory: new DriftFactory()
+    driftFactory: new DriftFactory(),
+    knockDrag: ARM.knockDrag
   });
   const picker = new CardPicker({ camera: rig.camera, field });
   const choreographer = new CardChoreographer({
@@ -133,12 +144,14 @@ async function main() {
   const gameClock = new PausableClock();
   const pauseScreen = new PauseScreen({ root: $('pause'), resumeButton: $('resumeBtn'), quitButton: $('quitBtn') });
   const pauseButton = new PauseButton($('pauseBtn'));
+  const reachMeter = new ReachMeter({ root: $('reachMeter'), fill: $('reachFill') });
   const pause = new PauseController({ clock: gameClock, screen: pauseScreen, button: pauseButton });
 
   /* ---- アプリ ---- */
   const sessionServices = {
     deckFactory, deckOptions: DECK_OPTIONS, matchRule, field, picker, choreographer,
-    pileFactory, hud, toast, timing: TIMING, cpuConfig: CPU, clock: gameClock
+    pileFactory, hud, toast, timing: TIMING, cpuConfig: CPU, clock: gameClock,
+    reachMeter, selectionFactory: new CardSelectionFactory({ picker })
   };
   const app = new App({
     menu, result, toast, strings: TEXT, pointer, keyboard, rig, pointingHand,
@@ -160,6 +173,12 @@ async function main() {
    * gameplay の中身はゲーム内時計で動くのでポーズで止まる。
    * 視点・手・描画は止めない（ポーズ画面の背景も描き続ける）。 */
   const gameplay = new PausableTimeline(gameClock)
+    .add(new ReachController({ keyboard, reach: armReach, meter: reachMeter, isEnabled: () => app.canReach() }))
+    .add(new ArmContactSystem({
+      arm: pointingHand, field, config: ARM,
+      isEnabled: () => app.canReach(),
+      onTouch: view => app.tryTouch(view)
+    }))
     .add(field)
     .add(dust)
     .add(app);
@@ -169,6 +188,7 @@ async function main() {
     .add(new HoverHighlighter({ pointer, picker, field, isEnabled: () => app.canHumanAct(), cursorTarget: renderContext.canvas }))
     .add(gameplay)
     .add(pointingHand)
+    .add(stretchArm)
     .add(holdingHand)
     .add(renderContext)
     .start();

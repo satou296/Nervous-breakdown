@@ -48,3 +48,17 @@
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.good { color: var(--brass); }
 #toast.bad { color: var(--ink-soft); }
+
+/* 達人モード：腕の長さメーター */
+.reach-meter {
+  /* 中央下部はめくったカードの置き場なので、右下に置く */
+  position: fixed; right: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
+  display: flex; align-items: center; gap: 10px; pointer-events: none;
+  background: var(--panel); border: 1px solid var(--brass-line); border-radius: 999px; padding: 6px 14px;
+  font-size: .72rem; letter-spacing: .1em; color: var(--muted); white-space: nowrap;
+}
+.reach-label { color: var(--brass); font-weight: 700; }
+.reach-track { width: clamp(90px, 22vw, 200px); height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.reach-fill { display: block; height: 100%; width: 0; background: var(--brass); }
+@media (max-width: 440px) { .reach-keys { display: none; } }

@@ -24,6 +24,9 @@
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="reachMeter" class="reach-meter" role="meter" aria-label="腕の長さ" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden>
+  <span class="reach-label">腕</span><span class="reach-track"><span class="reach-fill" id="reachFill"></span></span><span class="reach-keys">W 伸ばす / S 縮める</span>
+</div>
 <div id="help" hidden>カードをクリック（タップ）でめくる ・ ドラッグか矢印キーで見回す ・ Esc で一時停止</div>
 
 <div class="overlay" id="menu" hidden>
@@ -41,9 +44,10 @@
     </fieldset>
     <fieldset>
       <legend>難易度</legend>
-      <div class="seg seg-2">
+      <div class="seg">
         <input type="radio" name="difficulty" id="d-normal" value="normal" checked><label for="d-normal">ふつう<small>その場でゆらゆら</small></label>
         <input type="radio" name="difficulty" id="d-hard" value="hard"><label for="d-hard">むずかしい<small>上下左右に動き回る</small></label>
+        <input type="radio" name="difficulty" id="d-expert" value="expert"><label for="d-expert">達人<small>腕を伸ばして触る</small></label>
       </div>
     </fieldset>
     <fieldset>

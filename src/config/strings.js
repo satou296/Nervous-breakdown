@@ -15,6 +15,10 @@ export const TEXT = Object.freeze({
   pairBy: name => `${name}：ペア！`,
   miss: 'ざんねん',
   startFailed: msg => `開始できませんでした：${msg}`,
+  help: {
+    point: 'カードをクリック（タップ）でめくる ・ ドラッグか矢印キーで見回す ・ Esc で一時停止',
+    reach: 'W 長押しで腕を伸ばす ・ S 長押しで縮める ・ 指先でカードに触れるとめくる ・ カーソルで狙う ・ Esc で一時停止'
+  },
   result: {
     clearedEyebrow: 'Cleared',
     gameOverEyebrow: 'Game Over',

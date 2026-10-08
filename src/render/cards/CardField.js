@@ -13,8 +13,9 @@ export class CardField {
   #views = new Map();
   #hovered = null;
 
-  constructor({ scene, textures, layout, driftFactory, motion, cardSize, random = Math.random }) {
+  constructor({ scene, textures, layout, driftFactory, motion, cardSize, knockDrag, random = Math.random }) {
     this.scene = scene;
+    this.knockDrag = knockDrag;
     this.textures = textures;
     this.layout = layout;
     this.driftFactory = driftFactory;
@@ -45,6 +46,7 @@ export class CardField {
           bounds: this.bounds,
           motion: this.motion,
           spinScale: difficulty.spinScale,
+          knockDrag: this.knockDrag,
           random: this.random
         })
       });

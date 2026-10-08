@@ -64,6 +64,15 @@ export class CardView {
     this.#setBehavior(behavior);
   }
 
+  /* ---- 腕との接触（浮遊中だけ効く） ---- */
+  push(offset) {
+    if (this.isPickable) this.floatBehavior.push(this, offset);
+  }
+
+  knock(impulse, spinKick) {
+    if (this.isPickable) this.floatBehavior.knock(impulse, spinKick);
+  }
+
   /* ---- 強調表示 ---- */
   setHovered(hovered) { this.#hoverTarget = hovered ? 1 : 0; }
   setAimed(aimed) { this.#aimed = aimed; }

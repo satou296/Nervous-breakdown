@@ -16,6 +16,9 @@ export class Hud {
   }
 
   show() { this.root.hidden = false; this.helpEl.hidden = false; }
+
+  /** 画面下の操作説明を差し替える */
+  setHelp(text) { this.helpEl.textContent = text; }
   hide() { this.root.hidden = true; this.helpEl.hidden = true; }
 
   /**
