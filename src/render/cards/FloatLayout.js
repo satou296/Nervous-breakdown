@@ -10,6 +10,17 @@ export class FloatLayout {
     this.random = random;
   }
 
+  /** 浮遊してよい範囲全体を囲む箱（動き回るカードをこの中に留める） */
+  get bounds() {
+    const a = this.area;
+    const halfWidth = a.baseHalfWidth + a.depth * a.widthGrowth;
+    const top = a.minY + a.baseHeight + a.depth * a.heightGrowth;
+    return new THREE.Box3(
+      new THREE.Vector3(-halfWidth, a.minY - 0.15, a.nearZ - a.depth),
+      new THREE.Vector3(halfWidth, top + 0.2, a.nearZ)
+    );
+  }
+
   sample(count) {
     const { minSpacing } = this.area;
     const points = [];

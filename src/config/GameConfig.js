@@ -17,7 +17,7 @@ export const ATTRACT_DECK_SIZE = 52;
 /** 進行のテンポ（ミリ秒） */
 export const TIMING = Object.freeze({
   dealSettleMs: 900,
-  resolveDelayMs: 1050,
+  resolveDelayMs: 1550,   // めくった2枚目が「拡大表示 → 下部へ移動」を終えてから判定する
   matchCollectDelayMs: 650,
   missHideDelayMs: 1250,
   gameOverDelayMs: 1300,
@@ -30,10 +30,11 @@ export const TIMING = Object.freeze({
 /** アニメーション */
 export const MOTION = Object.freeze({
   scale: prefersReducedMotion ? 0.4 : 1,
-  revealSec: 0.8,
+  /** めくったカード：拡大表示 → 少し見せる → 画面下部へ */
+  reveal: Object.freeze({ presentSec: 0.6, holdSec: 0.45, dockSec: 0.4, spinTurns: 1, arcHeight: 0.12 }),
   collectSec: 0.85,
+  returnScaleRate: 4,
   hoverScale: 0.1,
-  wander: { x: 0.28, y: 0.2, z: 0.28 },
   followRate: 1.5,
   spinRecoverRate: 0.9
 });
@@ -50,11 +51,18 @@ export const FLOAT_AREA = Object.freeze({
   minSpacing: 1.05
 });
 
-/** めくったカードを並べる位置（カメラ基準のローカル座標） */
-export const REVEAL_SLOTS = Object.freeze([
-  Object.freeze([-0.48, 0.04, -2.25]),
-  Object.freeze([0.48, 0.04, -2.25])
-]);
+/**
+ * めくったカードの置き場所（カメラ基準のローカル座標）。
+ * present … 画面中央に大きく見せる位置
+ * docks   … 他のカードを選ぶ邪魔にならない画面下部の位置（1枚目・2枚目）
+ */
+export const REVEAL_LAYOUT = Object.freeze({
+  present: Object.freeze({ position: [0, 0.02, -1.3], scale: 1 }),
+  docks: Object.freeze([
+    Object.freeze({ position: [-0.19, -0.55, -1.55], scale: 0.36 }),
+    Object.freeze({ position: [0.19, -0.55, -1.55], scale: 0.36 })
+  ])
+});
 
 export const TABLE = Object.freeze({ z: -4.8, top: 0.82, radius: 3.6 });
 

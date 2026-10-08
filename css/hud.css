@@ -13,6 +13,15 @@
   display: block; font-family: var(--ui); font-weight: 500; font-size: .72rem; color: var(--muted);
   letter-spacing: .08em; margin-top: 2px; font-variant-numeric: tabular-nums;
 }
+.hud-right { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
+.pause-btn {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--brass-line); border-radius: 10px; padding: 10px 14px;
+  font-size: .8rem; letter-spacing: .1em; color: var(--ink);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: border-color .2s;
+}
+.pause-btn:hover { border-color: var(--brass); }
+.pause-btn span { width: 10px; height: 12px; border-left: 3px solid var(--brass); border-right: 3px solid var(--brass); box-sizing: border-box; }
 #scores { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip {
   display: flex; flex-direction: column; align-items: flex-start; min-width: 5.5rem; border-radius: 8px;

@@ -7,23 +7,30 @@ const TAU = Math.PI * 2;
 /**
  * 場に浮かぶカードの見た目の集合。
  * ルール上の Card から CardView を引けるようにし、配る・片付ける・毎フレーム更新するを担う。
+ * どう漂うかは、配るときに渡された難易度（drift / spinScale）で決まる。
  */
 export class CardField {
   #views = new Map();
   #hovered = null;
 
-  constructor({ scene, textures, layout, motion, cardSize, random = Math.random }) {
+  constructor({ scene, textures, layout, driftFactory, motion, cardSize, random = Math.random }) {
     this.scene = scene;
     this.textures = textures;
     this.layout = layout;
+    this.driftFactory = driftFactory;
     this.motion = motion;
     this.random = random;
     this.geometry = new THREE.PlaneGeometry(cardSize.width, cardSize.height);
+    this.bounds = layout.bounds;
   }
 
   get views() { return [...this.#views.values()]; }
 
-  populate(cards) {
+  /**
+   * @param {Card[]} cards
+   * @param {{ drift: object, spinScale: number }} difficulty
+   */
+  populate(cards, difficulty) {
     this.clear();
     const anchors = this.layout.sample(cards.length);
     cards.forEach((card, i) => {
@@ -31,12 +38,19 @@ export class CardField {
         card,
         textures: this.textures,
         geometry: this.geometry,
-        motion: this.motion,
-        floatBehavior: new FloatBehavior({ anchor: anchors[i], motion: this.motion, random: this.random })
+        floatBehavior: new FloatBehavior({
+          anchor: anchors[i],
+          drift: this.driftFactory.create(difficulty.drift),
+          home: this.scene,
+          bounds: this.bounds,
+          motion: this.motion,
+          spinScale: difficulty.spinScale,
+          random: this.random
+        })
       });
+      this.scene.add(view.object);
       this.#dropFromAbove(view, anchors[i]);
       view.float();
-      this.scene.add(view.object);
       this.#views.set(card, view);
     });
   }

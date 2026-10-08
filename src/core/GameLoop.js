@@ -9,7 +9,12 @@ export class GameLoop {
   #running = false;
   #maxDelta;
 
-  constructor({ maxDelta = 0.05 } = {}) {
+  /**
+   * @param {number} maxDelta 1フレームで進める最大秒数。
+   *   低フレームレートの端末でもゲーム内時計が実時間から遅れないよう、少し大きめにしている。
+   *   （タブ切り替えなどの長い中断は App が自動ポーズで扱う）
+   */
+  constructor({ maxDelta = 0.25 } = {}) {
     this.#maxDelta = maxDelta;
   }
 

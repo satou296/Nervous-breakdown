@@ -1,28 +1,27 @@
 import { THREE } from '../../lib/three.js';
-import { RevealBehavior } from './behaviors/RevealBehavior.js';
-import { CollectBehavior } from './behaviors/CollectBehavior.js';
 
 const HOVER_GLOW = new THREE.Color(0x5a3e10);
 const AIM_GLOW = new THREE.Color(0x8a6a20);
+/** 表を見せている間、照明の当たり方に関係なく札面が読めるよう自己発光させる強さ */
+const FACE_SELF_LIGHT = new THREE.Color(0x5a5650);
 
 /**
  * 1枚のカードの見た目。
  * 両面の板ポリゴンを持ち、「両面とも表」「両面とも裏」を切り替えられる。
- * 動き方は Behavior（State パターン）に委ねる。
+ * 動き方は Behavior（State パターン）に委ね、どの Behavior を使うかは外（CardChoreographer）が決める。
  */
 export class CardView {
   #behavior = null;
   #hoverTarget = 0;
   #aimed = false;
   #elapsed = 0;
+  #faceUp = false;
 
-  constructor({ card, textures, geometry, floatBehavior, motion }) {
+  constructor({ card, textures, geometry, floatBehavior }) {
     this.card = card;
     this.textures = textures;
     this.floatBehavior = floatBehavior;
-    this.motion = motion;
     this.hover = 0;
-    this.lastDelta = 0;
 
     this.materials = [0, 1].map(() => new THREE.MeshStandardMaterial({
       map: textures.back, roughness: 0.48, metalness: 0, alphaTest: 0.5, emissive: 0x000000
@@ -46,11 +45,13 @@ export class CardView {
   /* ---- 見た目の面 ---- */
   showFaceOnBothSides() {
     const face = this.textures.face(this.card.rank, this.card.suit);
-    this.materials.forEach(m => { m.map = face; });
+    this.#faceUp = true;
+    this.materials.forEach(m => { m.map = face; m.emissiveMap = face; m.needsUpdate = true; });
   }
 
   showBackOnBothSides() {
-    this.materials.forEach(m => { m.map = this.textures.back; });
+    this.#faceUp = false;
+    this.materials.forEach(m => { m.map = this.textures.back; m.emissiveMap = null; m.needsUpdate = true; });
   }
 
   /* ---- 動きの切り替え ---- */
@@ -58,12 +59,9 @@ export class CardView {
     this.#setBehavior(this.floatBehavior, { fromRest });
   }
 
-  revealTo(pose) {
-    this.#setBehavior(new RevealBehavior({ ...pose, durationSec: this.motion.revealSec }));
-  }
-
-  collectInto(slot) {
-    this.#setBehavior(new CollectBehavior({ slot, durationSec: this.motion.collectSec }));
+  /** 任意の Behavior に切り替える */
+  play(behavior) {
+    this.#setBehavior(behavior);
   }
 
   /* ---- 強調表示 ---- */
@@ -71,7 +69,6 @@ export class CardView {
   setAimed(aimed) { this.#aimed = aimed; }
 
   update(dt, elapsed) {
-    this.lastDelta = dt;
     this.#elapsed = elapsed;
     const target = this.isPickable ? this.#hoverTarget : 0;
     this.hover += (target - this.hover) * (1 - Math.exp(-dt * 12));
@@ -90,6 +87,10 @@ export class CardView {
   }
 
   #updateGlow() {
+    if (this.#faceUp) {
+      for (const m of this.materials) m.emissive.copy(FACE_SELF_LIGHT);
+      return;
+    }
     let strength = 0;
     let color = HOVER_GLOW;
     if (this.isPickable) {
