@@ -1,0 +1,37 @@
+import { EventEmitter } from '../core/EventEmitter.js';
+
+export const MenuEvent = Object.freeze({ Start: 'start' });
+
+/**
+ * 開始メニュー。選ばれたモードと枚数を Start イベントで通知する。
+ * （サンドボックス内でも動くよう、フォーム送信ではなくボタンのクリックで扱う）
+ */
+export class MenuScreen extends EventEmitter {
+  constructor({ root, startButton, defaults }) {
+    super();
+    this.root = root;
+    this.startButton = startButton;
+    this.defaults = defaults;
+    startButton.addEventListener('click', () => {
+      this.emit(MenuEvent.Start, {
+        modeId: this.#checkedValue('mode') ?? defaults.modeId,
+        deckSize: Number(this.#checkedValue('count') ?? defaults.deckSize)
+      });
+    });
+  }
+
+  get isOpen() { return !this.root.hidden; }
+
+  show() {
+    this.root.hidden = false;
+    this.startButton.focus();
+  }
+
+  hide() {
+    this.root.hidden = true;
+  }
+
+  #checkedValue(name) {
+    return this.root.querySelector(`input[name="${name}"]:checked`)?.value ?? null;
+  }
+}

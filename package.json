@@ -1,0 +1,11 @@
+{
+  "name": "floating-concentration",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "宙を舞うトランプを一人称視点でめくる3D神経衰弱（three.js）",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node --test tests/*.mjs"
+  }
+}
