@@ -83,6 +83,23 @@ export const CAMERA = Object.freeze({
 
 export const POINTER = Object.freeze({ dragThresholdPx: 7 });
 
+/** 達人モードの腕（長さはメートル、速さは m/s） */
+export const ARM = Object.freeze({
+  maxReach: 9.5,          // いちばん奥のカードまで届く長さ
+  extendSpeed: 3.4,       // W / S 長押しで伸び縮みする速さ
+  relaxSpeed: 6,          // 操作できないときに元に戻る速さ
+  shoulder: [0.27, -0.4, -0.16], // カメラ基準の肩の位置（伸びた腕はここから出る）
+  /* 当たり判定 */
+  armRadius: 0.1,
+  cardRadius: 0.35,
+  touchRadius: 0.6,       // 指先がカード中心からこの距離に入ったら「触れた」（回転していても触れやすく）
+  impulseBase: 2.2,       // 当たったときに弾く強さ
+  impulseFromSpeed: 0.6,  // 腕を速く動かすほど強く弾く
+  maxImpulse: 7,
+  spinKick: 2.5,
+  knockDrag: 1.6          // 弾かれたカードが止まるまでの減速
+});
+
 export const CPU = Object.freeze({ rememberChance: 0.78 });
 
 export const PILES = Object.freeze({

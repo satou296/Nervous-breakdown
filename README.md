@@ -51,13 +51,20 @@ main.js（組み立てのみ）
 | | `CalmDrift`, `RoamingDrift`, `DriftFactory` | 漂い方（Strategy）。むずかしいは範囲内を動き回る |
 | | `CardChoreographer` | めくる・取る・宙に戻すの振り付け |
 | | `CardField`, `FloatLayout`, `CardPicker`, `RevealStage` | 場の管理、配置と範囲、クリック判定、中央表示と下部の位置 |
-| `render/player/` | `FirstPersonRig`, `PointingHand`, `HoldingHand`, `HandModelFactory` | 目線のカメラと両手 |
+| `render/player/` | `FirstPersonRig`, `PointingHand`, `HoldingHand`, `HandModelFactory` | 目線のカメラと両手（右手は伸びた分だけ前へ出て、肩・手首・指先の位置を返す） |
+| | `StretchArm` | 伸びた腕（袖）の見た目 |
 | `render/piles/` | `HandPile`, `TablePile`, `PileFactory` | 取ったカードの置き場（Pile インターフェース） |
 | `input/` | `PointerInput`, `KeyboardInput`, `KeyboardLookController` | 入力の解釈 |
+| | `ReachController` | W / S の長押しを腕の伸び縮みに変換 |
+| `physics/` | `ArmReach` | 腕の伸び具合（0〜最大） |
+| | `ArmContactSystem` | 腕とカードの当たり判定。指先で触れたら選択、腕が当たったら押し出して弾く |
+| | `Knockback`, `vectorMath` | 弾かれたカードの勢いと減速、線分との距離計算（three.js 非依存でテスト可能） |
 | `ui/` | `Hud`, `Toast`, `MenuScreen`, `ResultScreen`, `ResultFormatter` | HTML 表示 |
 | | `PauseScreen`, `PauseButton` | ポーズ画面と一時停止ボタン |
+| | `ReachMeter` | 達人モードの腕の長さメーター |
 | `app/` | `App` | 画面遷移（メニュー → プレイ ⇄ ポーズ → 結果） |
 | | `PauseController` | ポーズ状態・ゲーム内時計・画面表示をそろえて切り替える |
+| | `PointSelection`, `ReachSelection` | カードの選び方（Strategy）。クリックで選ぶ／指先で触れて選ぶ |
 | | `GameSession` | ルールのイベントを演出・HUD・CPU につなぐ仲介役 |
 
 ## 1手の流れ
@@ -69,6 +76,17 @@ main.js（組み立てのみ）
 5. 演出が終わったら `endResolution()` → 次の `TurnStarted`（CPU ならば `CpuTurnRunner` が動く）
 
 ルールの判定（`resolve`）と確定（`endResolution`）を分けているので、演出に時間をかけてもルールの整合性は崩れません。
+
+## 難易度
+
+| 難易度 | カードの動き | 選び方 |
+|---|---|---|
+| ふつう | その場でゆらゆら | カーソルを合わせてクリック |
+| むずかしい | 範囲内を上下左右に動き回る | カーソルを合わせてクリック |
+| 達人 | 範囲内を動き回る | カーソルで狙い、**W 長押しで腕を伸ばし、S 長押しで縮める**。指先で触れたカードがめくれる。腕に当たったカードは弾かれて散らばる |
+
+達人の当たり判定は、腕を「肩→手首」「手首→指先」の2本のカプセル、カードを球として計算しています（`ArmContactSystem`）。
+大きさや弾く強さは `config/GameConfig.js` の `ARM` で調整できます。
 
 ## ポーズの仕組み
 

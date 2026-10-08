@@ -38,6 +38,19 @@ export class App {
     return this.isPlaying() && (this.#session?.canHumanAct() ?? false);
   }
 
+  /** 腕を伸ばす操作を受け付けるか（達人モードのプレイ中） */
+  canReach() {
+    return this.isPlaying() && (this.#session?.usesReach ?? false);
+  }
+
+  /**
+   * 腕の指先がカードに触れたときに呼ばれる。
+   * @returns {boolean} カードを選んだとして受け付けたか
+   */
+  tryTouch(view) {
+    return this.canHumanAct() && this.#session.handleTouch(view);
+  }
+
   /** プレイ画面が前面にあり、ポーズもしていない */
   isPlaying() {
     return this.#session !== null
@@ -62,6 +75,7 @@ export class App {
       if (this.isPlaying() || this.menu.isOpen) this.rig.lookByPixels(dx, dy);
     });
     this.keyboard.setLookEnabled(() => this.isPlaying());
+    this.keyboard.setReachEnabled(() => this.canReach());
     this.keyboard.on(KeyboardInputEvent.Escape, () => this.#togglePause());
     this.pointingHand.setAimProvider(() => (this.canHumanAct() ? this.pointer.ndc : null));
     // 別のタブに切り替えたら自動でポーズ

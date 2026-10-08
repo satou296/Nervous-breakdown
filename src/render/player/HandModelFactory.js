@@ -22,6 +22,7 @@ export class HandModelFactory {
       finger.position.set(shape.x, 0.002, 0.088);
       finger.rotation.y = pose.spread[i];
       hand.add(finger);
+      if (i === 0) hand.userData.fingertip = finger.userData.tip; // 人差し指の先（当たり判定に使う）
     });
     hand.add(this.#thumb(pose.thumb));
     hand.add(...this.#forearm());
@@ -64,6 +65,7 @@ export class HandModelFactory {
       parent.add(joint);
       parent = tip;
     });
+    root.userData.tip = parent;
     return root;
   }
 
