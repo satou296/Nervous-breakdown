@@ -1,0 +1,41 @@
+/* プレイ中のHUD・トースト・操作ヘルプ */
+#hud {
+  position: fixed; left: 16px; right: 16px; top: calc(env(safe-area-inset-top, 0px) + 12px);
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; justify-content: space-between;
+  pointer-events: none;
+}
+.hud-block {
+  background: var(--panel); border: 1px solid var(--brass-line); border-radius: 10px; padding: 8px 14px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+#turn { font-family: var(--display); font-weight: 800; font-size: 1.15rem; letter-spacing: .04em; }
+#turn small {
+  display: block; font-family: var(--ui); font-weight: 500; font-size: .72rem; color: var(--muted);
+  letter-spacing: .08em; margin-top: 2px; font-variant-numeric: tabular-nums;
+}
+#scores { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  display: flex; flex-direction: column; align-items: flex-start; min-width: 5.5rem; border-radius: 8px;
+  padding: 6px 12px; background: rgba(255, 255, 255, .04); border: 1px solid transparent;
+  transition: border-color .25s, background .25s;
+}
+.chip.active { border-color: var(--brass); background: rgba(216, 180, 106, .13); }
+.chip .nm { font-size: .72rem; color: var(--muted); letter-spacing: .1em; }
+.chip .sc { font-family: var(--display); font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.chip .unit { font-family: var(--ui); font-size: .7rem; font-weight: 500; color: var(--muted); margin-left: 3px; }
+
+#help {
+  position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  text-align: center; font-size: .75rem; color: var(--muted); letter-spacing: .06em;
+  pointer-events: none; text-shadow: 0 1px 3px #000;
+}
+
+#toast {
+  position: fixed; left: 50%; top: 22%; transform: translate(-50%, -8px);
+  font-family: var(--display); font-weight: 800; font-size: clamp(1.6rem, 5vw, 2.6rem); letter-spacing: .08em;
+  color: var(--ink); text-shadow: 0 2px 18px rgba(0, 0, 0, .8);
+  opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.good { color: var(--brass); }
+#toast.bad { color: var(--ink-soft); }
