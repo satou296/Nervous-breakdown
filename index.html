@@ -18,10 +18,13 @@
 
 <div id="hud" hidden>
   <div class="hud-block" id="turn"></div>
-  <div class="hud-block" id="scores"></div>
+  <div class="hud-right">
+    <div class="hud-block" id="scores"></div>
+    <button class="pause-btn" type="button" id="pauseBtn" aria-label="一時停止" hidden><span aria-hidden="true"></span>一時停止</button>
+  </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
-<div id="help" hidden>カードをクリック（タップ）でめくる ・ ドラッグか矢印キーで見回す ・ Esc でメニュー</div>
+<div id="help" hidden>カードをクリック（タップ）でめくる ・ ドラッグか矢印キーで見回す ・ Esc で一時停止</div>
 
 <div class="overlay" id="menu" hidden>
   <div class="panel">
@@ -34,6 +37,13 @@
         <input type="radio" name="mode" id="m-solo" value="solo" checked><label for="m-solo">ひとりで<small>手数とタイム</small></label>
         <input type="radio" name="mode" id="m-cpu" value="cpu"><label for="m-cpu">CPU対戦<small>交互にめくる</small></label>
         <input type="radio" name="mode" id="m-duo" value="duo"><label for="m-duo">2人で交代<small>同じ画面で</small></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>難易度</legend>
+      <div class="seg seg-2">
+        <input type="radio" name="difficulty" id="d-normal" value="normal" checked><label for="d-normal">ふつう<small>その場でゆらゆら</small></label>
+        <input type="radio" name="difficulty" id="d-hard" value="hard"><label for="d-hard">むずかしい<small>上下左右に動き回る</small></label>
       </div>
     </fieldset>
     <fieldset>
@@ -53,6 +63,18 @@
       </ol>
     </div>
     <button class="btn btn-block" type="button" id="startBtn">ゲーム開始</button>
+  </div>
+</div>
+
+<div class="overlay" id="pause" hidden>
+  <div class="panel panel-compact" role="dialog" aria-labelledby="pauseTitle">
+    <div class="eyebrow">Paused</div>
+    <h1 id="pauseTitle">一時停止中</h1>
+    <p class="lede">タイマーとカードの動きを止めています。</p>
+    <div class="row">
+      <button class="btn" type="button" id="resumeBtn">ゲームを続ける</button>
+      <button class="btn ghost" type="button" id="quitBtn">中断してスタート画面へ</button>
+    </div>
   </div>
 </div>
 

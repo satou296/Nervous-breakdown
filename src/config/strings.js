@@ -24,6 +24,7 @@ export const TEXT = Object.freeze({
     turns: '手数',
     time: 'タイム',
     misses: 'ミス',
+    difficulty: '難易度',
     turnsValue: n => `${n} 手`,
     missesValue: n => `${n} 回`,
     pairsValue: n => `${n} ペア`

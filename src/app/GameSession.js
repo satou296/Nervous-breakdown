@@ -14,20 +14,26 @@ export const SessionEvent = Object.freeze({ Finished: 'finished' });
  * 1回分のゲーム進行。
  * ルール（ConcentrationGame）のイベントを受けて、カードの演出・HUD・CPU の手番を
  * 適切なタイミングでつなぐ「仲介役」。ルール判定そのものは行わない。
+ *
+ * 時間はすべてゲーム内時計（services.clock）で数えるので、ポーズ中は
+ * タイマー・判定待ち・CPU の思考がまとめて止まる。Updatable（PausableTimeline の中で動かす）。
  */
 export class GameSession extends EventEmitter {
-  #scheduler = new Scheduler();
+  #scheduler;
   #game;
   #piles;
   #cpuMemory = null;
   #cpuRunner = null;
   #inputLocked = true;
+  #revealInProgress = false;
 
-  constructor({ mode, deckSize, services }) {
+  constructor({ mode, difficulty, deckSize, services }) {
     super();
     this.mode = mode;
+    this.difficulty = difficulty;
     this.deckSize = deckSize;
     this.s = services;
+    this.#scheduler = new Scheduler(services.clock);
   }
 
   get game() { return this.#game; }
@@ -41,13 +47,13 @@ export class GameSession extends EventEmitter {
       cards: deckFactory.create(maxRank),
       players: createPlayers(this.mode),
       matchRule,
-      stats: new GameStats()
+      stats: new GameStats(() => this.s.clock.nowMs)
     });
     this.#piles = this.mode.seats.map((seat, i) => pileFactory.create(seat.pile, i));
     this.#setUpCpu();
     this.#subscribe();
 
-    field.populate(this.#game.cards);
+    field.populate(this.#game.cards, this.difficulty);
     hud.show();
     this.#renderHud();
     this.#scheduler.after(timing.dealSettleMs, () => {
@@ -59,6 +65,7 @@ export class GameSession extends EventEmitter {
   /** 人間のプレイヤーがいまカードを選べるか */
   canHumanAct() {
     return !this.#inputLocked
+      && !this.#revealInProgress
       && this.#game?.phase === GamePhase.Selecting
       && !this.#game.currentPlayer.isCpu;
   }
@@ -71,6 +78,7 @@ export class GameSession extends EventEmitter {
   }
 
   update() {
+    this.#scheduler.update();
     if (this.mode.showClock) this.s.hud.updateClock(this.#game.stats.elapsedMs);
   }
 
@@ -109,10 +117,12 @@ export class GameSession extends EventEmitter {
   /* ---------------- ルールのイベント → 演出 ---------------- */
 
   #onCardRevealed({ card, slot }) {
-    const view = this.s.field.viewOf(card);
-    view.showFaceOnBothSides();
-    view.revealTo(this.s.revealStage.poseFor(slot));
+    const { choreographer, field } = this.s;
+    choreographer.reveal(field.viewOf(card), slot);
     this.#cpuMemory?.observe(card);
+    // 大きく表示している間は次のカードを選ばせない（重なって見えなくなるのを防ぐ）
+    this.#revealInProgress = true;
+    this.#scheduler.after(choreographer.revealDurationMs, () => { this.#revealInProgress = false; });
   }
 
   #onSelectionComplete() {
@@ -125,7 +135,7 @@ export class GameSession extends EventEmitter {
     cards.forEach(c => this.#cpuMemory?.forget(c));
     this.#scheduler.after(this.s.timing.matchCollectDelayMs, () => {
       const pile = this.#piles[this.#game.currentPlayerIndex];
-      cards.forEach(c => this.s.field.viewOf(c).collectInto(pile.nextSlot()));
+      cards.forEach(c => this.s.choreographer.collect(this.s.field.viewOf(c), pile.nextSlot()));
       this.#renderHud();
       this.#game.endResolution();
     });
@@ -134,11 +144,7 @@ export class GameSession extends EventEmitter {
   #onPairMissed({ cards }) {
     this.s.toast.show(TEXT.miss, 'bad');
     this.#scheduler.after(this.s.timing.missHideDelayMs, () => {
-      for (const card of cards) {
-        const view = this.s.field.viewOf(card);
-        view.showBackOnBothSides();
-        view.float({ fromRest: true });
-      }
+      cards.forEach(c => this.s.choreographer.returnToAir(this.s.field.viewOf(c)));
       this.#game.endResolution();
     });
   }

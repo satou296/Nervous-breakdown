@@ -34,7 +34,9 @@ main.js（組み立てのみ）
 | フォルダ | 主なクラス | 責務 |
 |---|---|---|
 | `config/` | `GameConfig`, `strings` | 調整値と文言の置き場（マジックナンバー・文字列を排除） |
-| `core/` | `EventEmitter`, `Scheduler`, `GameLoop` | 汎用の仕組み（通知・取消可能な遅延・フレームループ） |
+| `config/` | `Difficulties` | 難易度（漂い方・回転の速さ）の宣言的な定義 |
+| `core/` | `EventEmitter`, `GameLoop` | 汎用の仕組み（通知・フレームループ） |
+| | `PausableClock`, `PausableTimeline`, `Scheduler` | 一時停止できるゲーム内時計と、それで動く更新・遅延処理 |
 | `domain/` | `ConcentrationGame` | 神経衰弱のルールと状態遷移。イベントを発行するだけ |
 | | `Card`, `Player`, `TurnOrder`, `GameStats` | カードの状態、得点、手番、手数と時間 |
 | | `DeckFactory`, `FisherYatesShuffler` | 山札の生成とシャッフル（乱数は注入可能） |
@@ -44,26 +46,40 @@ main.js（組み立てのみ）
 | `render/environment/` | `Room`, `CasinoTable`, `Lighting`, `DustParticles` | 部屋の各要素 |
 | `render/textures/` | `SuitPainter`, `CardFacePainter`, `CardBackPainter`, `CardTextureLibrary` | カードの絵柄を描く／キャッシュする |
 | `render/cards/` | `CardView` | 1枚の見た目。両面表／両面裏の切り替え |
-| | `FloatBehavior`, `RevealBehavior`, `CollectBehavior` | 動き方（State パターン） |
-| | `CardField`, `FloatLayout`, `CardPicker`, `RevealStage` | 場の管理、配置、クリック判定、めくった位置 |
+| | `FloatBehavior`, `SequenceBehavior` | 動き方（State パターン）。浮遊と、手順の連続再生 |
+| | `PoseTween`, `Wait` | 手順の部品（目標姿勢への移動・待機） |
+| | `CalmDrift`, `RoamingDrift`, `DriftFactory` | 漂い方（Strategy）。むずかしいは範囲内を動き回る |
+| | `CardChoreographer` | めくる・取る・宙に戻すの振り付け |
+| | `CardField`, `FloatLayout`, `CardPicker`, `RevealStage` | 場の管理、配置と範囲、クリック判定、中央表示と下部の位置 |
 | `render/player/` | `FirstPersonRig`, `PointingHand`, `HoldingHand`, `HandModelFactory` | 目線のカメラと両手 |
 | `render/piles/` | `HandPile`, `TablePile`, `PileFactory` | 取ったカードの置き場（Pile インターフェース） |
 | `input/` | `PointerInput`, `KeyboardInput`, `KeyboardLookController` | 入力の解釈 |
 | `ui/` | `Hud`, `Toast`, `MenuScreen`, `ResultScreen`, `ResultFormatter` | HTML 表示 |
-| `app/` | `App` | 画面遷移（メニュー → プレイ → 結果） |
+| | `PauseScreen`, `PauseButton` | ポーズ画面と一時停止ボタン |
+| `app/` | `App` | 画面遷移（メニュー → プレイ ⇄ ポーズ → 結果） |
+| | `PauseController` | ポーズ状態・ゲーム内時計・画面表示をそろえて切り替える |
 | | `GameSession` | ルールのイベントを演出・HUD・CPU につなぐ仲介役 |
 
 ## 1手の流れ
 
 1. `PointerInput` が「タップ」を通知 → `App` → `GameSession.handleTap()`
 2. `CardPicker` がカーソル下の `CardView` を特定 → `ConcentrationGame.select(card)`
-3. ルールが `CardRevealed` を発行 → `GameSession` が `CardView` を両面表にして `RevealBehavior` へ
-4. 2枚目で `SelectionComplete` → 少し待って `resolve()` → `PairMatched` / `PairMissed`
+3. ルールが `CardRevealed` を発行 → `CardChoreographer` が両面を表にし、中央に大きく見せてから画面下部へ寄せる（この間は次を選べない）
+4. 2枚目で `SelectionComplete` → 下部に並んだら `resolve()` → `PairMatched` / `PairMissed`
 5. 演出が終わったら `endResolution()` → 次の `TurnStarted`（CPU ならば `CpuTurnRunner` が動く）
 
 ルールの判定（`resolve`）と確定（`endResolution`）を分けているので、演出に時間をかけてもルールの整合性は崩れません。
 
+## ポーズの仕組み
+
+カード・ゲーム進行・判定待ち・CPU の思考は、すべて `PausableTimeline`（ゲーム内時計）の中で動きます。
+`PauseController.pause()` で時計を止めると、これらとタイマーがまとめて止まり、再開すると止まった所から続きます。
+視点・手・描画は時計の外にあるので、ポーズ画面の背景も描かれ続けます。Esc キー、画面右上のボタン、別タブへの切り替えでポーズします。
+
 ## 拡張の例
+
+- **難易度を増やす**：`config/Difficulties.js` にエントリを追加し、`index.html` のメニューに選択肢を足す。新しい動き方は `offsetAt(t, out)` を持つクラスを作り、`DriftFactory.register()` で登録する。
+- **めくったときの見せ方を変える**：`CardChoreographer.reveal()` の手順（`PoseTween` / `Wait`）を組み替える。位置と大きさは `config/GameConfig.js` の `REVEAL_LAYOUT`。
 
 - **ペアの条件を変える**：`isMatch(a, b)` を持つクラスを作り、`main.js` の `matchRule` を差し替える（例：`SameRankAndColorRule`）。
 - **遊び方を増やす**：`domain/GameModes.js` にエントリを追加し、`index.html` のメニューに選択肢を足す。

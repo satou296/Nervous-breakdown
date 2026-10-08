@@ -5,11 +5,14 @@
 import { THREE } from './lib/three.js';
 import {
   CARD_SIZE, CARD_TEXTURE_SIZE, DECK_OPTIONS, ATTRACT_DECK_SIZE, TIMING, MOTION,
-  FLOAT_AREA, REVEAL_SLOTS, TABLE, CAMERA, POINTER, CPU, PILES
+  FLOAT_AREA, REVEAL_LAYOUT, TABLE, CAMERA, POINTER, CPU, PILES
 } from './config/GameConfig.js';
 import { TEXT } from './config/strings.js';
+import { DIFFICULTIES, DEFAULT_DIFFICULTY_ID, getDifficulty } from './config/Difficulties.js';
 
 import { GameLoop } from './core/GameLoop.js';
+import { PausableClock } from './core/PausableClock.js';
+import { PausableTimeline } from './core/PausableTimeline.js';
 import { FisherYatesShuffler } from './domain/Shuffler.js';
 import { DeckFactory } from './domain/DeckFactory.js';
 import { SameRankRule } from './domain/MatchRule.js';
@@ -29,6 +32,8 @@ import { FloatLayout } from './render/cards/FloatLayout.js';
 import { CardField } from './render/cards/CardField.js';
 import { CardPicker } from './render/cards/CardPicker.js';
 import { RevealStage } from './render/cards/RevealStage.js';
+import { CardChoreographer } from './render/cards/CardChoreographer.js';
+import { DriftFactory } from './render/cards/drift/DriftFactory.js';
 import { FirstPersonRig } from './render/player/FirstPersonRig.js';
 import { HandModelFactory } from './render/player/HandModelFactory.js';
 import { HAND_POSES } from './render/player/HandPoses.js';
@@ -46,12 +51,15 @@ import { MenuScreen } from './ui/MenuScreen.js';
 import { ResultScreen } from './ui/ResultScreen.js';
 import { ResultFormatter } from './ui/ResultFormatter.js';
 import { LoadingScreen } from './ui/LoadingScreen.js';
+import { PauseScreen } from './ui/PauseScreen.js';
+import { PauseButton } from './ui/PauseButton.js';
 
 import { App } from './app/App.js';
 import { GameSession } from './app/GameSession.js';
 import { AttractMode } from './app/AttractMode.js';
 import { HoverHighlighter } from './app/HoverHighlighter.js';
 import { ViewportBinder } from './app/ViewportBinder.js';
+import { PauseController } from './app/PauseController.js';
 import { waitForFont } from './app/fontLoader.js';
 
 const $ = id => document.getElementById(id);
@@ -93,10 +101,14 @@ async function main() {
   });
   const field = new CardField({
     scene, textures, motion: MOTION, cardSize: CARD_SIZE,
-    layout: new FloatLayout({ area: FLOAT_AREA })
+    layout: new FloatLayout({ area: FLOAT_AREA }),
+    driftFactory: new DriftFactory()
   });
   const picker = new CardPicker({ camera: rig.camera, field });
-  const revealStage = new RevealStage({ camera: rig.camera, slots: REVEAL_SLOTS });
+  const choreographer = new CardChoreographer({
+    stage: new RevealStage({ camera: rig.camera, layout: REVEAL_LAYOUT }),
+    motion: MOTION
+  });
   const pileFactory = new PileFactory({ scene, holdingHand, piles: PILES, table: TABLE });
 
   /* ---- ルール ---- */
@@ -108,36 +120,56 @@ async function main() {
   const keyboard = new KeyboardInput();
   const hud = new Hud({ root: $('hud'), turnEl: $('turn'), scoresEl: $('scores'), helpEl: $('help') });
   const toast = new Toast($('toast'), { durationMs: TIMING.toastMs });
-  const menu = new MenuScreen({ root: $('menu'), startButton: $('startBtn'), defaults: { modeId: 'solo', deckSize: 32 } });
+  const menu = new MenuScreen({
+    root: $('menu'), startButton: $('startBtn'),
+    defaults: { modeId: 'solo', difficultyId: DEFAULT_DIFFICULTY_ID, deckSize: 32 }
+  });
   const result = new ResultScreen({
     root: $('result'), eyebrowEl: $('resEyebrow'), titleEl: $('resTitle'), statsEl: $('resStats'),
     againButton: $('againBtn'), menuButton: $('menuBtn')
   });
 
+  /* ---- ゲーム内時計とポーズ ---- */
+  const gameClock = new PausableClock();
+  const pauseScreen = new PauseScreen({ root: $('pause'), resumeButton: $('resumeBtn'), quitButton: $('quitBtn') });
+  const pauseButton = new PauseButton($('pauseBtn'));
+  const pause = new PauseController({ clock: gameClock, screen: pauseScreen, button: pauseButton });
+
   /* ---- アプリ ---- */
   const sessionServices = {
-    deckFactory, deckOptions: DECK_OPTIONS, matchRule, field, picker, revealStage,
-    pileFactory, hud, toast, timing: TIMING, cpuConfig: CPU
+    deckFactory, deckOptions: DECK_OPTIONS, matchRule, field, picker, choreographer,
+    pileFactory, hud, toast, timing: TIMING, cpuConfig: CPU, clock: gameClock
   };
   const app = new App({
     menu, result, toast, strings: TEXT, pointer, keyboard, rig, pointingHand,
+    pauseScreen, pauseButton, pause,
     loading: new LoadingScreen($('loading')),
     resultFormatter: new ResultFormatter(),
-    attract: new AttractMode({ field, deckFactory, maxRank: DECK_OPTIONS[ATTRACT_DECK_SIZE] }),
-    createSession: ({ modeId, deckSize }) =>
-      new GameSession({ mode: getGameMode(modeId), deckSize, services: sessionServices })
+    attract: new AttractMode({
+      field, deckFactory, maxRank: DECK_OPTIONS[ATTRACT_DECK_SIZE], difficulty: DIFFICULTIES.normal
+    }),
+    createSession: ({ modeId, difficultyId, deckSize }) => new GameSession({
+      mode: getGameMode(modeId),
+      difficulty: getDifficulty(difficultyId),
+      deckSize,
+      services: sessionServices
+    })
   });
 
-  /* ---- フレームループ（登録順に更新される） ---- */
+  /* ---- フレームループ（登録順に更新される） ----
+   * gameplay の中身はゲーム内時計で動くのでポーズで止まる。
+   * 視点・手・描画は止めない（ポーズ画面の背景も描き続ける）。 */
+  const gameplay = new PausableTimeline(gameClock)
+    .add(field)
+    .add(dust)
+    .add(app);
   new GameLoop()
     .add(rig)
     .add(new KeyboardLookController({ keyboard, rig }))
     .add(new HoverHighlighter({ pointer, picker, field, isEnabled: () => app.canHumanAct(), cursorTarget: renderContext.canvas }))
-    .add(field)
+    .add(gameplay)
     .add(pointingHand)
     .add(holdingHand)
-    .add(dust)
-    .add(app)
     .add(renderContext)
     .start();
 

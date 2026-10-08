@@ -1,9 +1,7 @@
 import { THREE } from '../../../lib/three.js';
 
-const TAU = Math.PI * 2;
-
 /**
- * 浮遊状態：定位置のまわりをゆらゆら漂いながら回転する。
+ * 浮遊状態：定位置（anchor）＋漂い方（drift）の位置へ向かいながら回転する。
  * カードごとに1つ持ち、裏に戻ったときに再利用する。
  *
  * Behavior インターフェース：
@@ -14,36 +12,48 @@ const TAU = Math.PI * 2;
 export class FloatBehavior {
   pickable = true;
   #target = new THREE.Vector3();
+  #offset = new THREE.Vector3();
 
-  constructor({ anchor, motion, random = Math.random }) {
+  /**
+   * @param {object} p
+   * @param {THREE.Vector3} p.anchor   定位置
+   * @param {object} p.drift           DriftPattern（offsetAt を持つ）
+   * @param {THREE.Object3D} p.home    浮遊中の親（シーン）
+   * @param {THREE.Box3} [p.bounds]    はみ出してはいけない範囲
+   */
+  constructor({ anchor, drift, home, bounds = null, motion, spinScale = 1, random = Math.random }) {
     const signed = () => (random() < 0.5 ? -1 : 1);
     this.anchor = anchor.clone();
+    this.drift = drift;
+    this.home = home;
+    this.bounds = bounds;
     this.motion = motion;
     this.axis = new THREE.Vector3((random() - 0.5) * 0.7, 1, (random() - 0.5) * 0.7).normalize();
-    this.spinSpeed = (1.1 + random() * 1.3) * signed();
-    this.tumbleSpeed = (0.25 + random() * 0.5) * signed();
-    this.frequency = [0.25 + random() * 0.35, 0.3 + random() * 0.4, 0.2 + random() * 0.35];
-    this.phase = [random() * TAU, random() * TAU, random() * TAU];
+    this.spinSpeed = (1.1 + random() * 1.3) * signed() * spinScale;
+    this.tumbleSpeed = (0.25 + random() * 0.5) * signed() * spinScale;
     this.spin = 1;
   }
 
   /** @param {{ fromRest?: boolean }} options 静止状態から戻るときは回転を0から立ち上げる */
-  enter(_view, { fromRest = false } = {}) {
+  enter(view, { fromRest = false } = {}) {
+    if (view.object.parent !== this.home) this.home.attach(view.object);
     if (fromRest) this.spin = 0;
   }
 
   update(view, dt, t) {
-    const { wander, followRate, spinRecoverRate, scale, hoverScale } = this.motion;
+    const { followRate, spinRecoverRate, scale, hoverScale, returnScaleRate } = this.motion;
     const obj = view.object;
-    this.#target.set(
-      this.anchor.x + Math.sin(t * this.frequency[0] + this.phase[0]) * wander.x,
-      this.anchor.y + Math.sin(t * this.frequency[1] + this.phase[1]) * wander.y,
-      this.anchor.z + Math.cos(t * this.frequency[2] + this.phase[2]) * wander.z
-    );
+
+    this.#target.copy(this.anchor).add(this.drift.offsetAt(t, this.#offset));
+    if (this.bounds) this.bounds.clampPoint(this.#target, this.#target);
     obj.position.lerp(this.#target, 1 - Math.exp(-dt * followRate));
+
     this.spin += (1 - this.spin) * (1 - Math.exp(-dt * spinRecoverRate));
     obj.rotateOnAxis(this.axis, this.spinSpeed * dt * this.spin * scale);
     obj.rotateX(this.tumbleSpeed * dt * this.spin * scale);
-    obj.scale.setScalar(1 + view.hover * hoverScale);
+
+    const targetScale = 1 + view.hover * hoverScale;
+    const s = obj.scale.x + (targetScale - obj.scale.x) * (1 - Math.exp(-dt * returnScaleRate * 3));
+    obj.scale.setScalar(s);
   }
 }

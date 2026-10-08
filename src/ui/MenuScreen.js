@@ -3,7 +3,7 @@ import { EventEmitter } from '../core/EventEmitter.js';
 export const MenuEvent = Object.freeze({ Start: 'start' });
 
 /**
- * 開始メニュー。選ばれたモードと枚数を Start イベントで通知する。
+ * 開始メニュー。選ばれたモード・難易度・枚数を Start イベントで通知する。
  * （サンドボックス内でも動くよう、フォーム送信ではなくボタンのクリックで扱う）
  */
 export class MenuScreen extends EventEmitter {
@@ -15,6 +15,7 @@ export class MenuScreen extends EventEmitter {
     startButton.addEventListener('click', () => {
       this.emit(MenuEvent.Start, {
         modeId: this.#checkedValue('mode') ?? defaults.modeId,
+        difficultyId: this.#checkedValue('difficulty') ?? defaults.difficultyId,
         deckSize: Number(this.#checkedValue('count') ?? defaults.deckSize)
       });
     });
