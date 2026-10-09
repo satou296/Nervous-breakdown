@@ -3,6 +3,7 @@ import { Knockback } from '../../../physics/Knockback.js';
 
 /**
  * 浮遊状態：定位置（anchor）＋漂い方（drift）の位置へ向かいながら回転する。
+ * 定位置そのものの動き方は travel（AnchorTravel）に任せる（極では範囲内を渡り歩く）。
  * 腕に当たると、押し出し（push）と弾き（knock）で定位置ごと動く＝散らばる。
  * カードごとに1つ持ち、裏に戻ったときに再利用する。
  *
@@ -24,13 +25,15 @@ export class FloatBehavior {
    * @param {object} p.drift           DriftPattern（offsetAt を持つ）
    * @param {THREE.Object3D} p.home    浮遊中の親（シーン）
    * @param {THREE.Box3} [p.bounds]    はみ出してはいけない範囲
+   * @param {object} [p.travel]        AnchorTravel（step(anchor, dt) を持つ）。省略すると定位置は動かない
    */
-  constructor({ anchor, drift, home, bounds = null, motion, spinScale = 1, knockDrag = 1.6, random = Math.random }) {
+  constructor({ anchor, drift, home, bounds = null, travel = null, motion, spinScale = 1, knockDrag = 1.6, random = Math.random }) {
     const signed = () => (random() < 0.5 ? -1 : 1);
     this.anchor = anchor.clone();
     this.drift = drift;
     this.home = home;
     this.bounds = bounds;
+    this.travel = travel;
     this.motion = motion;
     this.axis = new THREE.Vector3((random() - 0.5) * 0.7, 1, (random() - 0.5) * 0.7).normalize();
     this.spinSpeed = (1.1 + random() * 1.3) * signed() * spinScale;
@@ -67,6 +70,10 @@ export class FloatBehavior {
     if (this.#knockback.isMoving) this.#moveBy(view, this.#knockback.step(dt));
 
     if (!this.#held) {
+      if (this.travel) {
+        this.travel.step(this.anchor, dt);
+        if (this.bounds) this.bounds.clampPoint(this.anchor, this.anchor);
+      }
       this.#target.copy(this.anchor).add(this.drift.offsetAt(t, this.#offset));
       if (this.bounds) this.bounds.clampPoint(this.#target, this.#target);
       obj.position.lerp(this.#target, 1 - Math.exp(-dt * followRate));

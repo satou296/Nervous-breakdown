@@ -43,6 +43,9 @@ export class GameSession extends EventEmitter {
   /** このゲームは腕を伸ばしてカードに触れる操作を使うか */
   get usesReach() { return this.#selection.usesReach; }
 
+  /** 手のひらが触れたカードをその場に止めるか（極では止めない） */
+  get holdsTouchedCard() { return this.difficulty.holdOnTouch ?? true; }
+
   /** カーソルを合わせたカードを光らせるか（腕で触れる遊び方では光らせない） */
   get usesHover() { return this.#selection.usesHover; }
 

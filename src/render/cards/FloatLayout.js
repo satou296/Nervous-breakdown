@@ -27,7 +27,7 @@ export class FloatLayout {
     let spacing = minSpacing;
     let failures = 0;
     while (points.length < count) {
-      const p = this.#randomPoint();
+      const p = this.randomPoint();
       if (points.every(o => o.distanceTo(p) > spacing)) {
         points.push(p);
         failures = 0;
@@ -39,7 +39,8 @@ export class FloatLayout {
     return points;
   }
 
-  #randomPoint() {
+  /** 浮遊してよい範囲（奥ほど広がる台形）の中のランダムな1点 */
+  randomPoint() {
     const a = this.area;
     const z = a.nearZ - this.random() * a.depth;
     const depthIn = -z + a.nearZ; // 0 = 手前

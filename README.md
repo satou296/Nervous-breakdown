@@ -49,6 +49,7 @@ main.js（組み立てのみ）
 | | `FloatBehavior`, `SequenceBehavior` | 動き方（State パターン）。浮遊と、手順の連続再生 |
 | | `PoseTween`, `Wait` | 手順の部品（目標姿勢への移動・待機） |
 | | `CalmDrift`, `RoamingDrift`, `DriftFactory` | 漂い方（Strategy）。むずかしいは範囲内を動き回る |
+| | `StationaryAnchor`, `RandomWaypointTravel`, `AnchorTravelFactory` | 定位置そのものの動き方（Strategy）。極は浮遊範囲の中をランダムに渡り歩く |
 | | `CardChoreographer` | めくる・取る・宙に戻すの振り付け |
 | | `CardField`, `FloatLayout`, `CardPicker`, `RevealStage` | 場の管理、配置と範囲、クリック判定、中央表示と下部の位置 |
 | `render/player/` | `FirstPersonRig`, `PointingHand`, `HoldingHand`, `HandModelFactory` | 目線のカメラと両手（右手は伸びた分だけ前へ出て、肩・手首・指先の位置を返す） |
@@ -59,7 +60,7 @@ main.js（組み立てのみ）
 | | `ReachController` | W / S の長押しを腕の伸び縮みに変換 |
 | `physics/` | `ArmReach` | 腕の伸び具合（0〜最大） |
 | | `PalmContactSensor` | 手のひらが触れているカードを1枚特定（少し離れるまで触れたままとみなす） |
-| | `PalmHold` | 触れているカードをその場に押さえる（クリックの空振り防止） |
+| | `PalmHold` | 触れているカードをその場に押さえる（達人のみ。極では押さえない） |
 | | `ArmCollisionResolver` | 腕に当たった他のカードを押し出して弾く（散らばる） |
 | | `Knockback`, `vectorMath` | 弾かれたカードの勢いと減速、線分との距離計算（three.js 非依存でテスト可能） |
 | `ui/` | `Hud`, `Toast`, `MenuScreen`, `ResultScreen`, `ResultFormatter` | HTML 表示 |
@@ -89,6 +90,7 @@ main.js（組み立てのみ）
 | ふつう | その場でゆらゆら | カーソルを合わせてクリック |
 | むずかしい | 範囲内を上下左右に動き回る | カーソルを合わせてクリック |
 | 達人 | 範囲内を動き回る | カーソルで狙い、**W 長押しで腕を伸ばし、S 長押しで縮める**。手のひらがカードに触れると表示が出るので、そこで**左クリック**するとめくれる。腕に当たった他のカードは弾かれて散らばる |
+| 極 | むずかしいと同じ揺れ動きに加え、**定位置そのものが範囲内をランダムに渡り歩く** | 達人と同じ。ただし手のひらが触れて表示が出てもカードは**止まらず**、左クリックで選ばれて初めて止まる |
 
 達人の当たり判定は、手のひらを点、腕を「肩→手首」「手首→指先」の2本のカプセル、カードを球として計算しています
 （`PalmContactSensor` と `ArmCollisionResolver`）。伸ばした腕と手は半透明になり、視界を遮りにくくしています。
