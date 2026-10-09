@@ -1,26 +1,24 @@
 import { closestPointOnSegment, distance, directionBetween, scaled } from './vectorMath.js';
 
 /**
- * 腕とカードの当たり判定。Updatable（ゲーム内時計で動かす）。
- *
+ * 腕に当たったカードを押しのけて弾き飛ばす（散らばる）。Updatable（ゲーム内時計で動かす）。
  * 腕は「肩→手首」「手首→指先」の2本のカプセル、カードは球として扱う。
- *   - 指先がカードに触れ、onTouch(view) が受け入れたら … そのカードを選んだことになる
- *   - それ以外で腕がカードに当たったら               … 押しのけて弾き飛ばす（散らばる）
+ * 手のひらで触れているカード（isExempt が true）は、選べるよう弾かない。
  *
  * arm  : { contactPoints(): { shoulder, wrist, tip } }（ワールド座標）
  * field: { views: CardView[] }  CardView は isPickable / object.position / push() / knock() を持つ
  */
-export class ArmContactSystem {
+export class ArmCollisionResolver {
   #contacts = new Set();
   #previousTip = null;
   #closest = { x: 0, y: 0, z: 0 };
   #candidate = { x: 0, y: 0, z: 0 };
 
-  constructor({ arm, field, isEnabled, onTouch, config }) {
+  constructor({ arm, field, isEnabled, isExempt = () => false, config }) {
     this.arm = arm;
     this.field = field;
     this.isEnabled = isEnabled;
-    this.onTouch = onTouch;
+    this.isExempt = isExempt;
     this.config = config;
   }
 
@@ -32,16 +30,12 @@ export class ArmContactSystem {
     }
     const { shoulder, wrist, tip } = this.arm.contactPoints();
     const tipSpeed = this.#trackTipSpeed(tip, dt);
-    const { armRadius, cardRadius, touchRadius } = this.config;
-    const hitDistance = armRadius + cardRadius;
+    const hitDistance = this.config.armRadius + this.config.cardRadius;
     const touching = new Set();
 
     for (const view of this.field.views) {
-      if (!view.isPickable) continue;
+      if (!view.isPickable || this.isExempt(view)) continue;
       const center = view.object.position;
-
-      if (distance(tip, center) < touchRadius && this.onTouch(view)) continue;
-
       const gap = this.#distanceToArm(center, shoulder, wrist, tip);
       if (gap >= hitDistance) continue;
 

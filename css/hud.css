@@ -62,3 +62,18 @@
 .reach-track { width: clamp(90px, 22vw, 200px); height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .12); overflow: hidden; }
 .reach-fill { display: block; height: 100%; width: 0; background: var(--brass); }
 @media (max-width: 440px) { .reach-keys { display: none; } }
+
+/* 達人モード：手のひらがカードに触れている表示（表のカードを並べる画面下部のすぐ上） */
+.contact-hint {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 31vh;
+  display: flex; align-items: center; gap: 10px; pointer-events: none; white-space: nowrap;
+  background: rgba(22, 15, 11, .86); border: 1px solid var(--brass); border-radius: 999px; padding: 8px 16px;
+  font-size: .82rem; letter-spacing: .06em; color: var(--ink);
+  box-shadow: 0 0 24px rgba(216, 180, 106, .25);
+}
+.contact-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brass); animation: contact-pulse 1s ease-in-out infinite; }
+.contact-action { font-weight: 700; color: var(--brass); }
+@keyframes contact-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .contact-dot { animation: none; } }
+@media (max-width: 440px) { .contact-hint { font-size: .74rem; padding: 7px 12px; } }
