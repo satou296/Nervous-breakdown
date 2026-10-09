@@ -16,6 +16,7 @@ export class FloatBehavior {
   #target = new THREE.Vector3();
   #offset = new THREE.Vector3();
   #knockback;
+  #held = false;
 
   /**
    * @param {object} p
@@ -49,6 +50,11 @@ export class FloatBehavior {
     this.#moveBy(view, offset);
   }
 
+  /** 手のひらで押さえられている間は、漂わずその場で止まる */
+  setHeld(held) {
+    this.#held = held;
+  }
+
   /** 弾かれた勢いを加える */
   knock(impulse, spinKick) {
     this.#knockback.apply(impulse, spinKick);
@@ -60,11 +66,14 @@ export class FloatBehavior {
 
     if (this.#knockback.isMoving) this.#moveBy(view, this.#knockback.step(dt));
 
-    this.#target.copy(this.anchor).add(this.drift.offsetAt(t, this.#offset));
-    if (this.bounds) this.bounds.clampPoint(this.#target, this.#target);
-    obj.position.lerp(this.#target, 1 - Math.exp(-dt * followRate));
+    if (!this.#held) {
+      this.#target.copy(this.anchor).add(this.drift.offsetAt(t, this.#offset));
+      if (this.bounds) this.bounds.clampPoint(this.#target, this.#target);
+      obj.position.lerp(this.#target, 1 - Math.exp(-dt * followRate));
+    }
 
-    this.spin += (1 - this.spin) * (1 - Math.exp(-dt * spinRecoverRate));
+    const spinGoal = this.#held ? 0.15 : 1; // 押さえている間は回転もほぼ止める
+    this.spin += (spinGoal - this.spin) * (1 - Math.exp(-dt * (this.#held ? 6 : spinRecoverRate)));
     const spinFactor = this.spin * (1 + this.#knockback.spinBoost) * scale;
     obj.rotateOnAxis(this.axis, this.spinSpeed * dt * spinFactor);
     obj.rotateX(this.tumbleSpeed * dt * spinFactor);

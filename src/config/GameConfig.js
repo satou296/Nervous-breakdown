@@ -92,12 +92,16 @@ export const ARM = Object.freeze({
   /* 当たり判定 */
   armRadius: 0.1,
   cardRadius: 0.35,
-  touchRadius: 0.6,       // 指先がカード中心からこの距離に入ったら「触れた」（回転していても触れやすく）
+  palmRadius: 0.6,        // 手のひらがカード中心からこの距離に入ったら「触れている」
   impulseBase: 2.2,       // 当たったときに弾く強さ
   impulseFromSpeed: 0.6,  // 腕を速く動かすほど強く弾く
   maxImpulse: 7,
   spinKick: 2.5,
-  knockDrag: 1.6          // 弾かれたカードが止まるまでの減速
+  knockDrag: 1.6,         // 弾かれたカードが止まるまでの減速
+  /* 見た目：伸ばすほど腕と手を透かして、視界を遮らないようにする */
+  minOpacity: 0.28,       // いちばん透かしたときの不透明度
+  fadeOverReach: 0.8,     // この長さまで伸ばすと最も透ける
+  sleeveRadius: 0.018     // 伸びた袖の太さ
 });
 
 export const CPU = Object.freeze({ rememberChance: 0.78 });

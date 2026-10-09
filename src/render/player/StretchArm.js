@@ -12,9 +12,10 @@ export class StretchArm {
   #dir = new THREE.Vector3();
   #end = new THREE.Vector3();
 
-  constructor({ camera, hand, material = new THREE.MeshStandardMaterial({ color: 0x28324a, roughness: 0.92 }) }) {
+  constructor({ camera, hand, radius, material = new THREE.MeshStandardMaterial({ color: 0x28324a, roughness: 0.92 }) }) {
     this.hand = hand;
-    const geometry = new THREE.CylinderGeometry(0.028, 0.036, 1, 20, 1, true);
+    this.material = material;
+    const geometry = new THREE.CylinderGeometry(radius * 0.8, radius, 1, 16, 1, true);
     geometry.translate(0, 0.5, 0); // 根元を原点に
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.visible = false;

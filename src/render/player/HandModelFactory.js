@@ -25,9 +25,18 @@ export class HandModelFactory {
       if (i === 0) hand.userData.fingertip = finger.userData.tip; // 人差し指の先（当たり判定に使う）
     });
     hand.add(this.#thumb(pose.thumb));
+    hand.userData.palm = this.#palmCenter();
+    hand.add(hand.userData.palm);
     hand.add(...this.#forearm());
     if (mirror) hand.scale.x = -1;
     return hand;
+  }
+
+  /** 手のひらの中心（当たり判定に使う目印） */
+  #palmCenter() {
+    const marker = new THREE.Group();
+    marker.position.set(0, -0.02, 0.05);
+    return marker;
   }
 
   #ellipsoid(sx, sy, sz, material = this.materials.skin) {

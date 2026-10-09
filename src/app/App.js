@@ -43,12 +43,9 @@ export class App {
     return this.isPlaying() && (this.#session?.usesReach ?? false);
   }
 
-  /**
-   * 腕の指先がカードに触れたときに呼ばれる。
-   * @returns {boolean} カードを選んだとして受け付けたか
-   */
-  tryTouch(view) {
-    return this.canHumanAct() && this.#session.handleTouch(view);
+  /** カーソルを合わせたカードを光らせるか */
+  canHover() {
+    return this.canHumanAct() && (this.#session?.usesHover ?? false);
   }
 
   /** プレイ画面が前面にあり、ポーズもしていない */

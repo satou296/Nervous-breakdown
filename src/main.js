@@ -42,7 +42,10 @@ import { HoldingHand } from './render/player/HoldingHand.js';
 import { PileFactory } from './render/piles/PileFactory.js';
 import { StretchArm } from './render/player/StretchArm.js';
 import { ArmReach } from './physics/ArmReach.js';
-import { ArmContactSystem } from './physics/ArmContactSystem.js';
+import { PalmContactSensor } from './physics/PalmContactSensor.js';
+import { ArmCollisionResolver } from './physics/ArmCollisionResolver.js';
+import { PalmHold } from './physics/PalmHold.js';
+import { ArmVisibility } from './render/player/ArmVisibility.js';
 
 import { PointerInput } from './input/PointerInput.js';
 import { KeyboardInput } from './input/KeyboardInput.js';
@@ -58,6 +61,7 @@ import { LoadingScreen } from './ui/LoadingScreen.js';
 import { PauseScreen } from './ui/PauseScreen.js';
 import { PauseButton } from './ui/PauseButton.js';
 import { ReachMeter } from './ui/ReachMeter.js';
+import { ContactIndicator } from './ui/ContactIndicator.js';
 
 import { App } from './app/App.js';
 import { GameSession } from './app/GameSession.js';
@@ -66,6 +70,7 @@ import { HoverHighlighter } from './app/HoverHighlighter.js';
 import { ViewportBinder } from './app/ViewportBinder.js';
 import { PauseController } from './app/PauseController.js';
 import { CardSelectionFactory } from './app/selection/CardSelectionMethods.js';
+import { ContactFeedback } from './app/ContactFeedback.js';
 import { waitForFont } from './app/fontLoader.js';
 
 const $ = id => document.getElementById(id);
@@ -85,19 +90,27 @@ async function main() {
   const dust = new DustParticles({ scene });
 
   /* ---- 手 ---- */
-  const handModels = new HandModelFactory();
+  // 右手は伸ばすと透かすので、左手とは別の材質で作る
+  const rightHandModels = new HandModelFactory();
+  const leftHandModels = new HandModelFactory();
   const pointingHand = new PointingHand({
     camera: rig.camera,
-    model: handModels.create(HAND_POSES.point),
+    model: rightHandModels.create(HAND_POSES.point),
     basePosition: new THREE.Vector3(0.21, -0.25, -0.44),
     shoulderPosition: new THREE.Vector3(...ARM.shoulder)
   });
-  const stretchArm = new StretchArm({ camera: rig.camera, hand: pointingHand });
+  const stretchArm = new StretchArm({ camera: rig.camera, hand: pointingHand, radius: ARM.sleeveRadius });
+  const armVisibility = new ArmVisibility({
+    hand: pointingHand,
+    materials: [...Object.values(rightHandModels.materials), stretchArm.material],
+    minOpacity: ARM.minOpacity,
+    fadeOverReach: ARM.fadeOverReach
+  });
   const armReach = new ArmReach(ARM);
   pointingHand.setReachProvider(() => armReach.length);
   const holdingHand = new HoldingHand({
     camera: rig.camera,
-    model: handModels.create(HAND_POSES.open, { mirror: true }),
+    model: leftHandModels.create(HAND_POSES.open, { mirror: true }),
     basePosition: new THREE.Vector3(-0.27, -0.28, -0.48)
   });
 
@@ -145,15 +158,22 @@ async function main() {
   const pauseScreen = new PauseScreen({ root: $('pause'), resumeButton: $('resumeBtn'), quitButton: $('quitBtn') });
   const pauseButton = new PauseButton($('pauseBtn'));
   const reachMeter = new ReachMeter({ root: $('reachMeter'), fill: $('reachFill') });
+
+  /* ---- 達人モード：手のひらの接触（app は後で作るので、判定は関数で遅延参照する） ---- */
+  let app = null;
+  const contactSensor = new PalmContactSensor({
+    arm: pointingHand, field, palmRadius: ARM.palmRadius,
+    isEnabled: () => app?.canReach() ?? false
+  });
   const pause = new PauseController({ clock: gameClock, screen: pauseScreen, button: pauseButton });
 
   /* ---- アプリ ---- */
   const sessionServices = {
     deckFactory, deckOptions: DECK_OPTIONS, matchRule, field, picker, choreographer,
     pileFactory, hud, toast, timing: TIMING, cpuConfig: CPU, clock: gameClock,
-    reachMeter, selectionFactory: new CardSelectionFactory({ picker })
+    reachMeter, selectionFactory: new CardSelectionFactory({ picker, contactSensor })
   };
-  const app = new App({
+  app = new App({
     menu, result, toast, strings: TEXT, pointer, keyboard, rig, pointingHand,
     pauseScreen, pauseButton, pause,
     loading: new LoadingScreen($('loading')),
@@ -174,10 +194,17 @@ async function main() {
    * 視点・手・描画は止めない（ポーズ画面の背景も描き続ける）。 */
   const gameplay = new PausableTimeline(gameClock)
     .add(new ReachController({ keyboard, reach: armReach, meter: reachMeter, isEnabled: () => app.canReach() }))
-    .add(new ArmContactSystem({
+    .add(contactSensor)
+    .add(new PalmHold({ sensor: contactSensor }))
+    .add(new ArmCollisionResolver({
       arm: pointingHand, field, config: ARM,
       isEnabled: () => app.canReach(),
-      onTouch: view => app.tryTouch(view)
+      isExempt: view => view === contactSensor.current
+    }))
+    .add(new ContactFeedback({
+      sensor: contactSensor,
+      indicator: new ContactIndicator($('contactHint')),
+      isActive: () => app.canHumanAct()
     }))
     .add(field)
     .add(dust)
@@ -185,10 +212,11 @@ async function main() {
   new GameLoop()
     .add(rig)
     .add(new KeyboardLookController({ keyboard, rig }))
-    .add(new HoverHighlighter({ pointer, picker, field, isEnabled: () => app.canHumanAct(), cursorTarget: renderContext.canvas }))
+    .add(new HoverHighlighter({ pointer, picker, field, isEnabled: () => app.canHover(), cursorTarget: renderContext.canvas }))
     .add(gameplay)
     .add(pointingHand)
     .add(stretchArm)
+    .add(armVisibility)
     .add(holdingHand)
     .add(renderContext)
     .start();

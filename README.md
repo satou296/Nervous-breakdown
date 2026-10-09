@@ -53,18 +53,23 @@ main.js（組み立てのみ）
 | | `CardField`, `FloatLayout`, `CardPicker`, `RevealStage` | 場の管理、配置と範囲、クリック判定、中央表示と下部の位置 |
 | `render/player/` | `FirstPersonRig`, `PointingHand`, `HoldingHand`, `HandModelFactory` | 目線のカメラと両手（右手は伸びた分だけ前へ出て、肩・手首・指先の位置を返す） |
 | | `StretchArm` | 伸びた腕（袖）の見た目 |
+| | `ArmVisibility` | 伸ばすほど右手と袖を透かす（視界を遮らない） |
 | `render/piles/` | `HandPile`, `TablePile`, `PileFactory` | 取ったカードの置き場（Pile インターフェース） |
 | `input/` | `PointerInput`, `KeyboardInput`, `KeyboardLookController` | 入力の解釈 |
 | | `ReachController` | W / S の長押しを腕の伸び縮みに変換 |
 | `physics/` | `ArmReach` | 腕の伸び具合（0〜最大） |
-| | `ArmContactSystem` | 腕とカードの当たり判定。指先で触れたら選択、腕が当たったら押し出して弾く |
+| | `PalmContactSensor` | 手のひらが触れているカードを1枚特定（少し離れるまで触れたままとみなす） |
+| | `PalmHold` | 触れているカードをその場に押さえる（クリックの空振り防止） |
+| | `ArmCollisionResolver` | 腕に当たった他のカードを押し出して弾く（散らばる） |
 | | `Knockback`, `vectorMath` | 弾かれたカードの勢いと減速、線分との距離計算（three.js 非依存でテスト可能） |
 | `ui/` | `Hud`, `Toast`, `MenuScreen`, `ResultScreen`, `ResultFormatter` | HTML 表示 |
 | | `PauseScreen`, `PauseButton` | ポーズ画面と一時停止ボタン |
 | | `ReachMeter` | 達人モードの腕の長さメーター |
+| | `ContactIndicator` | 「手のひらがカードに触れています・左クリックでめくる」の表示 |
 | `app/` | `App` | 画面遷移（メニュー → プレイ ⇄ ポーズ → 結果） |
 | | `PauseController` | ポーズ状態・ゲーム内時計・画面表示をそろえて切り替える |
-| | `PointSelection`, `ReachSelection` | カードの選び方（Strategy）。クリックで選ぶ／指先で触れて選ぶ |
+| | `PointSelection`, `ReachSelection` | カードの選び方（Strategy）。カーソルの先を選ぶ／手のひらが触れているカードを選ぶ（どちらも左クリック） |
+| | `ContactFeedback` | 触れているカードを光らせ、表示を出す |
 | | `GameSession` | ルールのイベントを演出・HUD・CPU につなぐ仲介役 |
 
 ## 1手の流れ
@@ -83,9 +88,10 @@ main.js（組み立てのみ）
 |---|---|---|
 | ふつう | その場でゆらゆら | カーソルを合わせてクリック |
 | むずかしい | 範囲内を上下左右に動き回る | カーソルを合わせてクリック |
-| 達人 | 範囲内を動き回る | カーソルで狙い、**W 長押しで腕を伸ばし、S 長押しで縮める**。指先で触れたカードがめくれる。腕に当たったカードは弾かれて散らばる |
+| 達人 | 範囲内を動き回る | カーソルで狙い、**W 長押しで腕を伸ばし、S 長押しで縮める**。手のひらがカードに触れると表示が出るので、そこで**左クリック**するとめくれる。腕に当たった他のカードは弾かれて散らばる |
 
-達人の当たり判定は、腕を「肩→手首」「手首→指先」の2本のカプセル、カードを球として計算しています（`ArmContactSystem`）。
+達人の当たり判定は、手のひらを点、腕を「肩→手首」「手首→指先」の2本のカプセル、カードを球として計算しています
+（`PalmContactSensor` と `ArmCollisionResolver`）。伸ばした腕と手は半透明になり、視界を遮りにくくしています。
 大きさや弾く強さは `config/GameConfig.js` の `ARM` で調整できます。
 
 ## ポーズの仕組み

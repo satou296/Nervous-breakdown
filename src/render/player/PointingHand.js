@@ -20,7 +20,10 @@ export class PointingHand {
   #pos = new THREE.Vector3();
   #target = new THREE.Vector3();
   #quat = new THREE.Quaternion();
-  #points = { shoulder: new THREE.Vector3(), wrist: new THREE.Vector3(), tip: new THREE.Vector3() };
+  #points = {
+    shoulder: new THREE.Vector3(), wrist: new THREE.Vector3(),
+    palm: new THREE.Vector3(), tip: new THREE.Vector3()
+  };
   #reach = 0;
 
   constructor({ camera, model, basePosition, shoulderPosition, scale = 0.9 }) {
@@ -32,6 +35,7 @@ export class PointingHand {
     this.root.scale.setScalar(scale);
     this.root.position.copy(this.base);
     this.fingertip = model.userData.fingertip ?? this.root;
+    this.palm = model.userData.palm ?? this.root;
     camera.add(this.root);
   }
 
@@ -51,11 +55,12 @@ export class PointingHand {
     this.#poke = 1;
   }
 
-  /** 当たり判定用：肩・手首・指先のワールド座標（毎回同じオブジェクトを使い回す） */
+  /** 当たり判定用：肩・手首・手のひら・指先のワールド座標（毎回同じオブジェクトを使い回す） */
   contactPoints() {
     const p = this.#points;
     this.camera.localToWorld(p.shoulder.copy(this.shoulder));
     this.root.getWorldPosition(p.wrist);
+    this.palm.getWorldPosition(p.palm);
     this.fingertip.getWorldPosition(p.tip);
     return p;
   }

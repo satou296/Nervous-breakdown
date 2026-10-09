@@ -1,16 +1,18 @@
 /**
  * カードの選び方（Strategy）。難易度の interaction で使い分ける。
+ * どちらも「左クリック（タップ）したときに、どのカードを選ぶか」を答える。
  *
  * interface CardSelectionMethod {
- *   cardFromTap(ndc): Card | null     … クリック（タップ）で選ぶカード
- *   cardFromTouch(view): Card | null  … 指先で触れて選ぶカード
- *   usesReach: boolean                … 腕を伸ばす操作を使うか
+ *   cardFromTap(ndc): Card | null
+ *   usesReach: boolean     … 腕を伸ばす操作を使うか
+ *   usesHover: boolean     … カーソルを合わせたカードを光らせるか
  * }
  */
 
-/** カーソルを合わせてクリックで選ぶ */
+/** カーソルを合わせたカードを、左クリックで選ぶ */
 export class PointSelection {
   usesReach = false;
+  usesHover = true;
 
   constructor({ picker }) {
     this.picker = picker;
@@ -19,22 +21,19 @@ export class PointSelection {
   cardFromTap(ndc) {
     return this.picker.pick(ndc)?.card ?? null;
   }
-
-  cardFromTouch() {
-    return null;
-  }
 }
 
-/** 腕を伸ばして、指先で触れたカードを選ぶ（クリックでは選べない） */
+/** 腕を伸ばし、手のひらが触れているカードを、左クリックで選ぶ */
 export class ReachSelection {
   usesReach = true;
+  usesHover = false;
 
-  cardFromTap() {
-    return null;
+  constructor({ contactSensor }) {
+    this.contactSensor = contactSensor;
   }
 
-  cardFromTouch(view) {
-    return view.card;
+  cardFromTap() {
+    return this.contactSensor.current?.card ?? null;
   }
 }
 
@@ -42,9 +41,9 @@ export class ReachSelection {
 export class CardSelectionFactory {
   #creators = new Map();
 
-  constructor({ picker }) {
+  constructor({ picker, contactSensor }) {
     this.register('point', () => new PointSelection({ picker }));
-    this.register('reach', () => new ReachSelection());
+    this.register('reach', () => new ReachSelection({ contactSensor }));
   }
 
   register(interaction, creator) {

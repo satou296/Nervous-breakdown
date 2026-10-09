@@ -43,6 +43,9 @@ export class GameSession extends EventEmitter {
   /** このゲームは腕を伸ばしてカードに触れる操作を使うか */
   get usesReach() { return this.#selection.usesReach; }
 
+  /** カーソルを合わせたカードを光らせるか（腕で触れる遊び方では光らせない） */
+  get usesHover() { return this.#selection.usesHover; }
+
   start() {
     const { deckFactory, deckOptions, matchRule, field, pileFactory, hud, timing } = this.s;
     const maxRank = deckOptions[this.deckSize];
@@ -82,16 +85,6 @@ export class GameSession extends EventEmitter {
     if (!this.canHumanAct()) return;
     const card = this.#selection.cardFromTap(ndc);
     if (card) this.#game.select(card);
-  }
-
-  /**
-   * 腕の指先がカードに触れた。
-   * @returns {boolean} 選んだとして受け付けたら true（受け付けなければ、そのカードは弾かれる）
-   */
-  handleTouch(view) {
-    if (!this.canHumanAct()) return false;
-    const card = this.#selection.cardFromTouch(view);
-    return card ? this.#game.select(card) : false;
   }
 
   update() {

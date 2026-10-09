@@ -17,7 +17,7 @@ export const TEXT = Object.freeze({
   startFailed: msg => `開始できませんでした：${msg}`,
   help: {
     point: 'カードをクリック（タップ）でめくる ・ ドラッグか矢印キーで見回す ・ Esc で一時停止',
-    reach: 'W 長押しで腕を伸ばす ・ S 長押しで縮める ・ 指先でカードに触れるとめくる ・ カーソルで狙う ・ Esc で一時停止'
+    reach: 'カーソルで狙い W 長押しで腕を伸ばす ・ S で縮める ・ 手のひらがカードに触れたら左クリックでめくる ・ Esc で一時停止'
   },
   result: {
     clearedEyebrow: 'Cleared',

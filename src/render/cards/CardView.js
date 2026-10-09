@@ -2,6 +2,7 @@ import { THREE } from '../../lib/three.js';
 
 const HOVER_GLOW = new THREE.Color(0x5a3e10);
 const AIM_GLOW = new THREE.Color(0x8a6a20);
+const TOUCH_GLOW = new THREE.Color(0xb08a30);
 /** 表を見せている間、照明の当たり方に関係なく札面が読めるよう自己発光させる強さ */
 const FACE_SELF_LIGHT = new THREE.Color(0x5a5650);
 
@@ -14,6 +15,7 @@ export class CardView {
   #behavior = null;
   #hoverTarget = 0;
   #aimed = false;
+  #touched = false;
   #elapsed = 0;
   #faceUp = false;
 
@@ -73,9 +75,16 @@ export class CardView {
     if (this.isPickable) this.floatBehavior.knock(impulse, spinKick);
   }
 
+  /** 手のひらで押さえる／離す */
+  setHeld(held) {
+    this.floatBehavior.setHeld(held);
+  }
+
   /* ---- 強調表示 ---- */
   setHovered(hovered) { this.#hoverTarget = hovered ? 1 : 0; }
   setAimed(aimed) { this.#aimed = aimed; }
+  /** 手のひらが触れている（左クリックでめくれる）ことを示す */
+  setTouched(touched) { this.#touched = touched; }
 
   update(dt, elapsed) {
     this.#elapsed = elapsed;
@@ -103,7 +112,10 @@ export class CardView {
     let strength = 0;
     let color = HOVER_GLOW;
     if (this.isPickable) {
-      if (this.#aimed) {
+      if (this.#touched) {
+        color = TOUCH_GLOW;
+        strength = 0.85 + 0.15 * Math.sin(this.#elapsed * 6);
+      } else if (this.#aimed) {
         color = AIM_GLOW;
         strength = 0.6 + 0.4 * Math.sin(this.#elapsed * 14);
       } else {
