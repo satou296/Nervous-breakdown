@@ -7,14 +7,15 @@ const TAU = Math.PI * 2;
 /**
  * 場に浮かぶカードの見た目の集合。
  * ルール上の Card から CardView を引けるようにし、配る・片付ける・毎フレーム更新するを担う。
- * どう漂うかは、配るときに渡された難易度（drift / spinScale）で決まる。
+ * どう漂うかは、配るときに渡された難易度（drift / travel / spinScale）で決まる。
  */
 export class CardField {
   #views = new Map();
   #hovered = null;
 
-  constructor({ scene, textures, layout, driftFactory, motion, cardSize, knockDrag, random = Math.random }) {
+  constructor({ scene, textures, layout, driftFactory, travelFactory, motion, cardSize, knockDrag, random = Math.random }) {
     this.scene = scene;
+    this.travelFactory = travelFactory;
     this.knockDrag = knockDrag;
     this.textures = textures;
     this.layout = layout;
@@ -29,7 +30,7 @@ export class CardField {
 
   /**
    * @param {Card[]} cards
-   * @param {{ drift: object, spinScale: number }} difficulty
+   * @param {{ drift: object, travel?: object, spinScale: number }} difficulty
    */
   populate(cards, difficulty) {
     this.clear();
@@ -42,6 +43,7 @@ export class CardField {
         floatBehavior: new FloatBehavior({
           anchor: anchors[i],
           drift: this.driftFactory.create(difficulty.drift),
+          travel: this.travelFactory.create(difficulty.travel),
           home: this.scene,
           bounds: this.bounds,
           motion: this.motion,

@@ -4,8 +4,11 @@
  *
  * drift.type: 'calm'  … 定位置のまわりで小さく揺れる
  *             'roam'  … 決められた範囲の中を上下左右に大きく動き回る
+ * travel.type: （省略）  … 定位置は動かない
+ *              'waypoint' … 定位置そのものが浮遊範囲の中をランダムに渡り歩く
  * interaction: 'point' … カーソルを合わせてクリックで選ぶ
- *              'reach' … 腕を伸ばして指先で触れて選ぶ（腕に当たったカードは弾かれて散らばる）
+ *              'reach' … 腕を伸ばし、手のひらで触れたカードを左クリックで選ぶ（腕に当たったカードは弾かれて散らばる）
+ * holdOnTouch: 手のひらが触れたカードをその場に止めるか（reach のときだけ意味がある）
  */
 export const DIFFICULTIES = Object.freeze({
   normal: Object.freeze({
@@ -35,7 +38,22 @@ export const DIFFICULTIES = Object.freeze({
       speed: { min: 0.22, max: 0.4 }       // 腕で触る分、むずかしいより少しゆっくり
     }),
     spinScale: 1.35,
-    interaction: 'reach'
+    interaction: 'reach',
+    holdOnTouch: true
+  }),
+  master: Object.freeze({
+    id: 'master',
+    label: '極',
+    // むずかしいと同じ速さで揺れ動きながら、定位置そのものも範囲内をランダムに渡り歩く
+    drift: Object.freeze({
+      type: 'roam',
+      range: { x: 1.15, y: 0.55, z: 0.7 },
+      speed: { min: 0.28, max: 0.5 }
+    }),
+    travel: Object.freeze({ type: 'waypoint', speed: { min: 0.35, max: 0.75 } }),
+    spinScale: 1.35,
+    interaction: 'reach',
+    holdOnTouch: false   // 触れても止まらない。クリックで選ばれて初めて止まる
   })
 });
 

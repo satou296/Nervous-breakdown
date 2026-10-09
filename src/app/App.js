@@ -43,6 +43,11 @@ export class App {
     return this.isPlaying() && (this.#session?.usesReach ?? false);
   }
 
+  /** 手のひらが触れたカードを押さえて止めるか */
+  canHoldTouched() {
+    return this.canReach() && (this.#session?.holdsTouchedCard ?? false);
+  }
+
   /** カーソルを合わせたカードを光らせるか */
   canHover() {
     return this.canHumanAct() && (this.#session?.usesHover ?? false);

@@ -34,6 +34,7 @@ import { CardPicker } from './render/cards/CardPicker.js';
 import { RevealStage } from './render/cards/RevealStage.js';
 import { CardChoreographer } from './render/cards/CardChoreographer.js';
 import { DriftFactory } from './render/cards/drift/DriftFactory.js';
+import { AnchorTravelFactory } from './render/cards/travel/AnchorTravelFactory.js';
 import { FirstPersonRig } from './render/player/FirstPersonRig.js';
 import { HandModelFactory } from './render/player/HandModelFactory.js';
 import { HAND_POSES } from './render/player/HandPoses.js';
@@ -122,10 +123,12 @@ async function main() {
     backPainter: new CardBackPainter({ suitPainter, ...CARD_TEXTURE_SIZE }),
     ...CARD_TEXTURE_SIZE
   });
+  const floatLayout = new FloatLayout({ area: FLOAT_AREA });
   const field = new CardField({
     scene, textures, motion: MOTION, cardSize: CARD_SIZE,
-    layout: new FloatLayout({ area: FLOAT_AREA }),
+    layout: floatLayout,
     driftFactory: new DriftFactory(),
+    travelFactory: new AnchorTravelFactory({ layout: floatLayout }),
     knockDrag: ARM.knockDrag
   });
   const picker = new CardPicker({ camera: rig.camera, field });
@@ -195,7 +198,7 @@ async function main() {
   const gameplay = new PausableTimeline(gameClock)
     .add(new ReachController({ keyboard, reach: armReach, meter: reachMeter, isEnabled: () => app.canReach() }))
     .add(contactSensor)
-    .add(new PalmHold({ sensor: contactSensor }))
+    .add(new PalmHold({ sensor: contactSensor, isEnabled: () => app.canHoldTouched() }))
     .add(new ArmCollisionResolver({
       arm: pointingHand, field, config: ARM,
       isEnabled: () => app.canReach(),
